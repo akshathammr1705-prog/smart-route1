@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Route Optimizer | AI-Powered Eco-Routing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        eco: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        },
+                        dark: {
+                            900: '#0a0a0a',
+                            800: '#171717',
+                            700: '#262626',
+                        }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'gradient-x': 'gradient-x 15s ease infinite',
+                        'slide-up': 'slide-up 0.6s ease-out',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        },
+                        'gradient-x': {
+                            '0%, 100%': { 'background-position': '0% 50%' },
+                            '50%': { 'background-position': '100% 50%' },
+                        },
+                        'slide-up': {
+                            '0%': { transform: 'translateY(30px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0a0a0a;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .glass-strong {
+            background: rgba(255, 255, 255, 0.07);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        
+        .text-gradient {
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #16a34a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .bg-gradient-mesh {
+            background: 
+                radial-gradient(at 40% 20%, rgba(34, 197, 94, 0.15) 0px, transparent 50%),
+                radial-gradient(at 80% 0%, rgba(74, 222, 128, 0.1) 0px, transparent 50%),
+                radial-gradient(at 0% 50%, rgba(22, 163, 74, 0.1) 0px, transparent 50%),
+                radial-gradient(at 80% 50%, rgba(34, 197, 94, 0.05) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(74, 222, 128, 0.1) 0px, transparent 50%);
+        }
+        
+        .card-hover {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px -15px rgba(34, 197, 94, 0.3);
+            border-color: rgba(74, 222, 128, 0.5);
+        }
+        
+        .route-line {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: draw 3s ease-out forwards;
+        }
+        
+        @keyframes draw {
+            to { stroke-dashoffset: 0; }
+        }
+        
+        .counter {
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease-out;
+        }
+        
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .nav-link {
+            position: relative;
+        }
+        
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 0;
+            background: #4ade80;
+            transition: width 0.3s ease;
+        }
+        
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        
+        .blob {
+            position: absolute;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: blob-bounce 10s infinite ease-in-out;
+        }
+        
+        @keyframes blob-bounce {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+        
+        .input-glow:focus {
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
+            border-color: #4ade80;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+        }
+    </style>
+</head>
+<body class="font-sans antialiased">
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 glass border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex items-center gap-3 group cursor-pointer">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-eco-400 to-eco-600 flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
+                        <i data-lucide="route" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <span class="font-display font-bold text-xl tracking-tight">Smart Route</span>
+                </div>
+                
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#problem" class="nav-link text-sm font-medium text-gray-300 hover:text-white transition-colors">Problem</a>
+                    <a href="#solution" class="nav-link text-sm font-medium text-gray-300 hover:text-white transition-colors">Solution</a>
+                    <a href="#demo" class="nav-link text-sm font-medium text-gray-300 hover:text-white transition-colors">Demo</a>
+                    <a href="#features" class="nav-link text-sm font-medium text-gray-300 hover:text-white transition-colors">Features</a>
+                    <a href="#impact" class="nav-link text-sm font-medium text-gray-300 hover:text-white transition-colors">Impact</a>
+                </div>
+                
+                <button class="hidden md:flex items-center gap-2 px-6 py-2.5 rounded-full bg-eco-500 hover:bg-eco-400 text-dark-900 font-semibold text-sm transition-all hover:scale-105 hover:shadow-lg hover:shadow-eco-500/25">
+                    <span>Get Started</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+                
+                <button class="md:hidden text-white" onclick="toggleMobileMenu()">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden glass border-t border-white/10">
+            <div class="px-6 py-4 space-y-4">
+                <a href="#problem" class="block text-gray-300 hover:text-white">Problem</a>
+                <a href="#solution" class="block text-gray-300 hover:text-white">Solution</a>
+                <a href="#demo" class="block text-gray-300 hover:text-white">Demo</a>
+                <a href="#features" class="block text-gray-300 hover:text-white">Features</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden bg-gradient-mesh">
+        <!-- Animated Background Blobs -->
+        <div class="blob w-96 h-96 bg-eco-500 rounded-full top-0 left-0"></div>
+        <div class="blob w-80 h-80 bg-emerald-600 rounded-full bottom-0 right-0 animation-delay-2000"></div>
+        <div class="blob w-64 h-64 bg-teal-500 rounded-full top-1/2 left-1/2 animation-delay-4000"></div>
+        
+        <div class="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 text-center">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-8 animate-pulse-slow">
+                <span class="w-2 h-2 rounded-full bg-eco-400 animate-pulse"></span>
+                <span class="text-sm font-medium text-eco-300">Hackathon 2026 Project</span>
+            </div>
+            
+            <h1 class="font-display font-bold text-5xl md:text-7xl lg:text-8xl leading-tight mb-6">
+                Drive <span class="text-gradient">Smarter</span>,<br>
+                Save <span class="text-gradient">Fuel</span>
+            </h1>
+            
+            <p class="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto mb-12 leading-relaxed">
+                AI-powered eco-routing that reduces fuel costs and carbon emissions. 
+                Make every trip count for your wallet and the planet.
+            </p>
+            
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+                <button onclick="scrollToDemo()" class="group px-8 py-4 rounded-full bg-gradient-to-r from-eco-500 to-eco-600 text-dark-900 font-bold text-lg transition-all hover:scale-105 hover:shadow-2xl hover:shadow-eco-500/30 flex items-center gap-3">
+                    <span>Try Interactive Demo</span>
+                    <i data-lucide="zap" class="w-5 h-5 group-hover:animate-pulse"></i>
+                </button>
+                <button onclick="scrollToSolution()" class="px-8 py-4 rounded-full glass text-white font-semibold text-lg hover:bg-white/10 transition-all flex items-center gap-3">
+                    <span>Learn More</span>
+                    <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <!-- Live Stats Ticker -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <div class="glass rounded-2xl p-6 text-center card-hover">
+                    <div class="text-3xl font-display font-bold text-eco-400 mb-1 counter" data-target="2.5">0</div>
+                    <div class="text-sm text-gray-400">Liters Saved per Trip</div>
+                </div>
+                <div class="glass rounded-2xl p-6 text-center card-hover">
+                    <div class="text-3xl font-display font-bold text-eco-400 mb-1 counter" data-target="30">0</div>
+                    <div class="text-sm text-gray-400">% Cost Reduction</div>
+                </div>
+                <div class="glass rounded-2xl p-6 text-center card-hover">
+                    <div class="text-3xl font-display font-bold text-eco-400 mb-1 counter" data-target="500">0</div>
+                    <div class="text-sm text-gray-400">kg CO₂ Reduced</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scroll Indicator -->
+        <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+            <i data-lucide="chevron-down" class="w-6 h-6 text-gray-500"></i>
+        </div>
+    </section>
+
+    <!-- Problem Section -->
+    <section id="problem" class="py-24 relative">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="text-center mb-16 reveal">
+                <h2 class="font-display font-bold text-4xl md:text-5xl mb-4">The <span class="text-gradient">Problem</span></h2>
+                <p class="text-gray-400 text-lg max-w-2xl mx-auto">Inefficient routing creates a double penalty: higher costs and environmental damage.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="glass rounded-2xl p-8 card-hover reveal group">
+                    <div class="w-14 h-14 rounded-2xl bg-red-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="map" class="w-7 h-7 text-red-400"></i>
+                    </div>
+                    <h3 class="font-display font-semibold text-xl mb-3">Inefficient Selection</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">People choose routes by habit or shortest distance, ignoring fuel efficiency completely.</p>
+                </div>
+                
+                <div class="glass rounded-2xl p-8 card-hover reveal group" style="transition-delay: 100ms;">
+                    <div class="w-14 h-14 rounded-2xl bg-orange-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="traffic-cone" class="w-7 h-7 text-orange-400"></i>
+                    </div>
+                    <h3 class="font-display font-semibold text-xl mb-3">Hidden Factors</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">Traffic, elevation, and road type dramatically impact consumption but remain invisible.</p>
+                </div>
+                
+                <div class="glass rounded-2xl p-8 card-hover reveal group" style="transition-delay: 200ms;">
+                    <div class="w-14 h-14 rounded-2xl bg-yellow-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="banknote" class="w-7 h-7 text-yellow-400"></i>
+                    </div>
+                    <h3 class="font-display font-semibold text-xl mb-3">Economic Cost</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">Unnecessary fuel consumption drains wallets with every inefficient trip taken.</p>
+                </div>
+                
+                <div class="glass rounded-2xl p-8 card-hover reveal group" style="transition-delay: 300ms;">
+                    <div class="w-14 h-14 rounded-2xl bg-gray-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="eye-off" class="w-7 h-7 text-gray-400"></i>
+                    </div>
+                    <h3 class="font-display font-semibold text-xl mb-3">Invisible Metrics</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">Current apps hide fuel and CO₂ data, preventing informed decision-making.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Demo Section -->
+    <section id="demo" class="py-24 relative bg-dark-800/50">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="text-center mb-12 reveal">
+                <h2 class="font-display font-bold text-4xl md:text-5xl mb-4">See It In <span class="text-gradient">Action</span></h2>
+                <p class="text-gray-400 text-lg">Experience how Smart Route Optimizer transforms your daily commute</p>
+            </div>
+            
+            <!-- Interactive Route Comparison Widget -->
+            <div class="glass-strong rounded-3xl p-8 md:p-12 reveal">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <!-- Input Panel -->
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Starting Point</label>
+                            <div class="relative">
+                                <i data-lucide="map-pin" class="absolute left-4 top-3.5 w-5 h-5 text-eco-400"></i>
+                                <input type="text" id="startPoint" value="Downtown Office" class="w-full pl-12 pr-4 py-3 rounded-xl bg-dark-700 border border-white/10 text-white placeholder-gray-500 input-glow focus:outline-none transition-all" placeholder="Enter origin">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Destination</label>
+                            <div class="relative">
+                                <i data-lucide="navigation" class="absolute left-4 top-3.5 w-5 h-5 text-eco-400"></i>
+                                <input type="text" id="endPoint" value="Airport Terminal" class="w-full pl-12 pr-4 py-3 rounded-xl bg-dark-700 border border-white/10 text-white placeholder-gray-500 input-glow focus:outline-none transition-all" placeholder="Enter destination">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Vehicle Type</label>
+                            <div class="grid grid-cols-3 gap-3">
+                                <button onclick="selectVehicle('sedan')" id="btn-sedan" class="vehicle-btn py-3 rounded-xl border border-eco-500 bg-eco-500/20 text-eco-300 font-medium text-sm transition-all">
+                                    <i data-lucide="car" class="w-5 h-5 mx-auto mb-1"></i>
+                                    Sedan
+                                </button>
+                                <button onclick="selectVehicle('suv')" id="btn-suv" class="vehicle-btn py-3 rounded-xl border border-white/10 bg-dark-700 text-gray-400 font-medium text-sm transition-all hover:border-eco-500/50">
+                                    <i data-lucide="truck" class="w-5 h-5 mx-auto mb-1"></i>
+                                    SUV
+                                </button>
+                                <button onclick="selectVehicle('bike')" id="btn-bike" class="vehicle-btn py-3 rounded-xl border border-white/10 bg-dark-700 text-gray-400 font-medium text-sm transition-all hover:border-eco-500/50">
+                                    <i data-lucide="bike" class="w-5 h-5 mx-auto mb-1"></i>
+                                    Bike
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <button onclick="calculateRoute()" class="w-full py-4 rounded-xl bg-gradient-to-r from-eco-500 to-eco-600 text-dark-900 font-bold text-lg hover:shadow-lg hover:shadow-eco-500/30 transition-all flex items-center justify-center gap-2 group">
+                            <span>Optimize Route</span>
+                            <i data-lucide="sparkles" class="w-5 h-5 group-hover:rotate-12 transition-transform"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Results Panel -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="font-display font-semibold text-xl">Route Comparison</h3>
+                            <span class="text-xs text-eco-400 bg-eco-500/10 px-3 py-1 rounded-full">Live Analysis</span>
+                        </div>
+                        
+                        <!-- Route Cards -->
+                        <div id="route-results" class="space-y-4">
+                            <div class="p-6 rounded-xl border border-white/10 bg-dark-700/50 opacity-50">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="font-medium text-gray-300">Fastest Route</span>
+                                    <span class="text-sm text-gray-500">25 min</span>
+                                </div>
+                                <div class="h-2 bg-dark-800 rounded-full overflow-hidden">
+                                    <div class="h-full bg-gray-600 w-full"></div>
+                                </div>
+                                <div class="mt-3 flex items-center gap-4 text-sm text-gray-500">
+                                    <span>3.2L fuel</span>
+                                    <span>•</span>
+                                    <span>$4.80 cost</span>
+                                    <span>•</span>
+                                    <span>7.4kg CO₂</span>
+                                </div>
+                            </div>
+                            
+                            <div class="p-6 rounded-xl border-2 border-eco-500 bg-eco-500/10 relative overflow-hidden">
+                                <div class="absolute top-0 right-0 bg-eco-500 text-dark-900 text-xs font-bold px-3 py-1 rounded-bl-xl">RECOMMENDED</div>
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="font-medium text-eco-300 flex items-center gap-2">
+                                        <i data-lucide="leaf" class="w-4 h-4"></i>
+                                        Eco Route
+                                    </span>
+                                    <span class="text-sm text-eco-400 font-semibold">28 min</span>
+                                </div>
+                                <div class="h-2 bg-dark-800 rounded-full overflow-hidden mb-3">
+                                    <div class="h-full bg-eco-500 w-[85%]"></div>
+                                </div>
+                                <div class="grid grid-cols-3 gap-4 mt-4">
+                                    <div class="text-center">
+                                        <div class="text-lg font-bold text-eco-400">2.8L</div>
+                                        <div class="text-xs text-gray-400">Fuel</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-lg font-bold text-eco-400">$4.20</div>
+                                        <div class="text-xs text-gray-400">Cost</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-lg font-bold text-eco-400">6.5kg</div>
+                                        <div class="text-xs text-gray-400">CO₂</div>
+                                    </div>
+                                </div>
+                                <div class="mt-4 pt-4 border-t border-eco-500/30 flex items-center justify-between text-sm">
+                                    <span class="text-eco-300 font-medium">Save 0.4L (12%)</span>
+                                    <span class="text-eco-300 font-medium">+$0.60 • +3 min</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Savings Summary -->
+                        <div id="savings-summary" class="mt-6 p-6 rounded-xl bg-gradient-to-r from-eco-600/20 to-teal-600/20 border border-eco-500/30 hidden">
+                            <h4 class="font-display font-semibold text-lg mb-4 flex items-center gap-2">
+                                <i data-lucide="trending-down" class="w-5 h-5 text-eco-400"></i>
+                                Projected Annual Savings
+                            </h4>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-white counter" id="annual-fuel">0</div>
+                                    <div class="text-xs text-gray-400">Liters Saved</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-white counter" id="annual-cost">0</div>
+                                    <div class="text-xs text-gray-400">Dollars Saved</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-white counter" id="annual-co2">0</div>
+                                    <div class="text-xs text-gray-400">kg CO₂ Avoided</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Solution Section -->
+    <section id="solution" class="py-24 relative">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                <div class="reveal">
+                    <h2 class="font-display font-bold text-4xl md:text-5xl mb-6">Fuel-First <span class="text-gradient">Optimization</span></h2>
+                    <p class="text-gray-400 text-lg mb-8 leading-relaxed">
+                        Unlike traditional navigation apps that prioritize speed alone, our AI analyzes traffic patterns, elevation changes, road types, and vehicle specifications to find the truly optimal route.
+                    </p>
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-eco-500/20 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="brain" class="w-6 h-6 text-eco-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-lg mb-1">AI-Powered Analysis</h3>
+                                <p class="text-gray-400 text-sm">Machine learning models predict fuel consumption based on real-time conditions</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-eco-500/20 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="scale" class="w-6 h-6 text-eco-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-lg mb-1">Clear Tradeoff Visualization</h3>
+                                <p class="text-gray-400 text-sm">See exactly what you save in fuel, cost, and emissions vs. time tradeoffs</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-eco-500/20 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="settings-2" class="w-6 h-6 text-eco-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-lg mb-1">Decision Engine</h3>
+                                <p class="text-gray-400 text-sm">Not just navigation—understand why one route is better than another</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="relative reveal">
+                    <div class="absolute inset-0 bg-gradient-to-r from-eco-500 to-teal-500 rounded-3xl blur-3xl opacity-20"></div>
+                    <div class="relative glass-strong rounded-3xl p-8">
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-sm font-medium text-gray-400">System Architecture</span>
+                            <span class="px-3 py-1 rounded-full bg-eco-500/20 text-eco-400 text-xs font-medium">Real-time</span>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center gap-4 p-4 rounded-xl bg-dark-700/50 border border-white/5">
+                                <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                                    <i data-lucide="smartphone" class="w-5 h-5 text-blue-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-sm">Frontend</div>
+                                    <div class="text-xs text-gray-500">Input Collection & Display</div>
+                                </div>
+                                <i data-lucide="arrow-down" class="w-4 h-4 text-gray-600"></i>
+                            </div>
+                            
+                            <div class="flex items-center gap-4 p-4 rounded-xl bg-dark-700/50 border border-white/5 ml-4">
+                                <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                                    <i data-lucide="server" class="w-5 h-5 text-purple-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-sm">Backend</div>
+                                    <div class="text-xs text-gray-500">API Orchestration & Data</div>
+                                </div>
+                                <i data-lucide="arrow-down" class="w-4 h-4 text-gray-600"></i>
+                            </div>
+                            
+                            <div class="flex items-center gap-4 p-4 rounded-xl bg-dark-700/50 border border-white/5 ml-8">
+                                <div class="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                                    <i data-lucide="cpu" class="w-5 h-5 text-orange-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-sm">Optimization Engine</div>
+                                    <div class="text-xs text-gray-500">Route Analysis & Conditions</div>
+                                </div>
+                                <i data-lucide="arrow-down" class="w-4 h-4 text-gray-600"></i>
+                            </div>
+                            
+                            <div class="flex items-center gap-4 p-4 rounded-xl bg-eco-500/20 border border-eco-500/50 ml-12">
+                                <div class="w-10 h-10 rounded-lg bg-eco-500 flex items-center justify-center">
+                                    <i data-lucide="piggy-bank" class="w-5 h-5 text-dark-900"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-sm text-eco-300">Savings Calculator</div>
+                                    <div class="text-xs text-eco-400/70">Fuel, Cost & CO₂ Benefits</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Use Cases -->
+    <section id="features" class="py-24 relative bg-dark-800/30">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="text-center mb-16 reveal">
+                <h2 class="font-display font-bold text-4xl md:text-5xl mb-4">Built For <span class="text-gradient">Everyone</span></h2>
+                <p class="text-gray-400 text-lg">From daily commuters to enterprise fleets</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="group relative overflow-hidden rounded-2xl glass p-8 card-hover reveal">
+                    <div class="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="relative">
+                        <div class="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center mb-6">
+                            <i data-lucide="user" class="w-7 h-7 text-blue-400"></i>
+                        </div>
+                        <h3 class="font-display font-semibold text-xl mb-3">Daily Commuters</h3>
+                        <p class="text-gray-400 text-sm mb-4">Optimize your daily drive to work. Save fuel every single day without thinking about it.</p>
+                        <ul class="space-y-2 text-xs text-gray-500">
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-eco-400"></i> Automatic route learning</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-eco-400"></i> Monthly savings reports</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="group relative overflow-hidden rounded-2xl glass p-8 card-hover reveal" style="transition-delay: 100ms;">
+                    <div class="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="relative">
+                        <div class="w-14 h-14 rounded-2xl bg-orange-500/20 flex items-center justify-center mb-6">
+                            <i data-lucide="bike" class="w-7 h-7 text-orange-400"></i>
+                        </div>
+                        <h3 class="font-display font-semibold text-xl mb-3">Delivery Riders</h3>
+                        <p class="text-gray-400 text-sm mb-4">Multi-stop optimization for gig workers. More deliveries, less fuel, higher earnings.</p>
+                        <ul class="space-y-2 text-xs text-gray-500">
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-eco-400"></i> Multi-stop routing</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-eco-400"></i> Earnings optimization</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="group relative overflow-hidden rounded-2xl glass p-8 card-hover reveal" style="transition-delay: 200ms;">
+                    <div class="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="relative">
+                        <div class="w-14 h-14 rounded-2xl bg-purple-500/20 flex items-center justify-center mb-6">
+                            <i data-lucide="truck" class="w-7 h-7 text-purple-400"></i>
+                        </div>
+                        <h3 class="font-display font-semibold text-xl mb-3">Fleet Managers</h3>
+                        <p class="text-gray-400 text-sm mb-4">Enterprise dashboard for monitoring and optimizing entire vehicle fleets in real-time.</p>
+                        <ul class="space-y-2 text-xs text-gray-500">
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-eco-400"></i> Fleet-wide analytics</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-eco-400"></i> Driver performance</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="group relative overflow-hidden rounded-2xl glass p-8 card-hover reveal" style="transition-delay: 300ms;">
+                    <div class="absolute inset-0 bg-gradient-to-br from-eco-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="relative">
+                        <div class="w-14 h-14 rounded-2xl bg-eco-500/20 flex items-center justify-center mb-6">
+                            <i data-lucide="bar-chart-3" class="w-7 h-7 text-eco-400"></i>
+                        </div>
+                        <h3 class="font-display font-semibold text-xl mb-3">Admin Systems</h3>
+                        <p class="text-gray-400 text-sm mb-4">Advanced analytics and monitoring for logistics companies and transport operators.</p>
+                        <ul class="space-y-2 text-xs text-gray-500">
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-eco-400"></i> CO₂ reporting</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3 h-3 text-eco-400"></i> Cost center analysis</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Impact Section -->
+    <section id="impact" class="py-24 relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-b from-eco-900/20 to-transparent"></div>
+        <div class="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                <div class="order-2 lg:order-1 reveal">
+                    <div class="grid grid-cols-2 gap-6">
+                        <div class="metric-card rounded-2xl p-6 border border-white/10">
+                            <div class="text-4xl font-display font-bold text-eco-400 mb-2 counter" data-target="15000">0</div>
+                            <div class="text-sm text-gray-400">Liters Saved Monthly</div>
+                        </div>
+                        <div class="metric-card rounded-2xl p-6 border border-white/10 mt-8">
+                            <div class="text-4xl font-display font-bold text-eco-400 mb-2 counter" data-target="35000">0</div>
+                            <div class="text-sm text-gray-400">kg CO₂ Reduced</div>
+                        </div>
+                        <div class="metric-card rounded-2xl p-6 border border-white/10">
+                            <div class="text-4xl font-display font-bold text-eco-400 mb-2 counter" data-target="25000">0</div>
+                            <div class="text-sm text-gray-400">Dollars Saved</div>
+                        </div>
+                        <div class="metric-card rounded-2xl p-6 border border-white/10 mt-8">
+                            <div class="text-4xl font-display font-bold text-eco-400 mb-2 counter" data-target="5000">0</div>
+                            <div class="text-sm text-gray-400">Active Users</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="order-1 lg:order-2 reveal">
+                    <h2 class="font-display font-bold text-4xl md:text-5xl mb-6">Measurable <span class="text-gradient">Impact</span></h2>
+                    <p class="text-gray-400 text-lg mb-8 leading-relaxed">
+                        Every optimized trip contributes to a larger mission. Our users are collectively making a significant dent in carbon emissions while saving money.
+                    </p>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-4">
+                            <div class="w-2 h-2 rounded-full bg-eco-400"></div>
+                            <span class="text-gray-300">Equivalent to planting 2,000 trees monthly</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-2 h-2 rounded-full bg-eco-400"></div>
+                            <span class="text-gray-300">30% average reduction in fuel costs</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-2 h-2 rounded-full bg-eco-400"></div>
+                            <span class="text-gray-300">Compatible with all vehicle types</span>
+                        </div>
+                    </div>
+                    
+                    <button class="mt-8 px-8 py-4 rounded-full border border-eco-500 text-eco-400 font-semibold hover:bg-eco-500 hover:text-dark-900 transition-all flex items-center gap-2">
+                        <span>View Full Report</span>
+                        <i data-lucide="external-link" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-24 relative">
+        <div class="max-w-5xl mx-auto px-6 lg:px-8">
+            <div class="glass-strong rounded-3xl p-12 md:p-16 text-center relative overflow-hidden reveal">
+                <div class="absolute inset-0 bg-gradient-to-r from-eco-600/20 to-teal-600/20"></div>
+                <div class="absolute top-0 right-0 w-64 h-64 bg-eco-500 rounded-full blur-3xl opacity-20"></div>
+                <div class="absolute bottom-0 left-0 w-64 h-64 bg-teal-500 rounded-full blur-3xl opacity-20"></div>
+                
+                <div class="relative z-10">
+                    <h2 class="font-display font-bold text-4xl md:text-5xl mb-6">Ready to Drive Smarter?</h2>
+                    <p class="text-gray-400 text-lg mb-8 max-w-2xl mx-auto">
+                        Join thousands of drivers who are saving fuel and reducing emissions with every trip. Start optimizing today.
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <button class="px-8 py-4 rounded-full bg-eco-500 text-dark-900 font-bold text-lg hover:shadow-2xl hover:shadow-eco-500/30 transition-all hover:scale-105 flex items-center gap-2">
+                            <span>Get Early Access</span>
+                            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        </button>
+                        <button class="px-8 py-4 rounded-full glass text-white font-semibold hover:bg-white/10 transition-all flex items-center gap-2">
+                            <i data-lucide="github" class="w-5 h-5"></i>
+                            <span>View on GitHub</span>
+                        </button>
+                    </div>
+                    
+                    <div class="mt-12 flex items-center justify-center gap-8 text-gray-500">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="mail" class="w-4 h-4"></i>
+                            <span class="text-sm">contact@smartrouteoptimizer.com</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="globe" class="w-4 h-4"></i>
+                            <span class="text-sm">www.smartrouteoptimizer.com</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/10 py-12">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-eco-400 to-eco-600 flex items-center justify-center">
+                        <i data-lucide="route" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <span class="font-display font-bold text-lg">Smart Route Optimizer</span>
+                </div>
+                
+                <div class="flex items-center gap-6 text-sm text-gray-500">
+                    <a href="#" class="hover:text-white transition-colors">Privacy</a>
+                    <a href="#" class="hover:text-white transition-colors">Terms</a>
+                    <a href="#" class="hover:text-white transition-colors">Contact</a>
+                </div>
+                
+                <div class="text-sm text-gray-600">
+                    © 2026 Gen Coders. Hackathon Project.
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+        
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+        
+        // Smooth scroll functions
+        function scrollToDemo() {
+            document.getElementById('demo').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function scrollToSolution() {
+            document.getElementById('solution').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Vehicle selection
+        let selectedVehicle = 'sedan';
+        function selectVehicle(type) {
+            selectedVehicle = type;
+            document.querySelectorAll('.vehicle-btn').forEach(btn => {
+                btn.classList.remove('border-eco-500', 'bg-eco-500/20', 'text-eco-300');
+                btn.classList.add('border-white/10', 'bg-dark-700', 'text-gray-400');
+            });
+            const activeBtn = document.getElementById(`btn-${type}`);
+            activeBtn.classList.remove('border-white/10', 'bg-dark-700', 'text-gray-400');
+            activeBtn.classList.add('border-eco-500', 'bg-eco-500/20', 'text-eco-300');
+        }
+        
+        // Route calculation simulation
+        function calculateRoute() {
+            const summary = document.getElementById('savings-summary');
+            summary.classList.remove('hidden');
+            summary.classList.add('animate-slide-up');
+            
+            // Animate counters
+            animateValue('annual-fuel', 0, 146, 1500);
+            animateValue('annual-cost', 0, 219, 1500);
+            animateValue('annual-co2', 0, 340, 1500);
+            
+            // Re-initialize icons for new content
+            lucide.createIcons();
+        }
+        
+        // Counter animation helper
+        function animateValue(id, start, end, duration) {
+            const obj = document.getElementById(id);
+            const range = end - start;
+            const minTimer = 50;
+            let stepTime = Math.abs(Math.floor(duration / range));
+            stepTime = Math.max(stepTime, minTimer);
+            let startTime = new Date().getTime();
+            let endTime = startTime + duration;
+            let timer;
+            
+            function run() {
+                let now = new Date().getTime();
+                let remaining = Math.max((endTime - now) / duration, 0);
+                let value = Math.round(end - (remaining * range));
+                obj.innerHTML = value;
+                if (value == end) {
+                    clearInterval(timer);
+                }
+            }
+            
+            timer = setInterval(run, stepTime);
+            run();
+        }
+        
+        // Scroll reveal animation
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    
+                    // Animate counters when visible
+                    const counters = entry.target.querySelectorAll('.counter[data-target]');
+                    counters.forEach(counter => {
+                        const target = parseInt(counter.getAttribute('data-target'));
+                        animateValue(counter.id || Math.random().toString(), 0, target, 2000);
+                    });
+                }
+            });
+        }, observerOptions);
+        
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+        
+        // Parallax effect for hero blobs
+        document.addEventListener('mousemove', (e) => {
+            const blobs = document.querySelectorAll('.blob');
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            
+            blobs.forEach((blob, index) => {
+                const speed = (index + 1) * 20;
+                const xOffset = (window.innerWidth / 2 - e.clientX) / speed;
+                const yOffset = (window.innerHeight / 2 - e.clientY) / speed;
+                blob.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+            });
+        });
+        
+        // Navbar scroll effect
+        let lastScroll = 0;
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('nav');
+            const currentScroll = window.pageYOffset;
+            
+            if (currentScroll > 100) {
+                nav.classList.add('glass-strong');
+                nav.classList.remove('glass');
+            } else {
+                nav.classList.add('glass');
+                nav.classList.remove('glass-strong');
+            }
+            
+            lastScroll = currentScroll;
+        });
+    </script>
+</body>
+</html>
